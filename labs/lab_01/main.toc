@@ -1,0 +1,4 @@
+\babel@toc {russian}{}\relax 
+\contentsline {section}{ВВЕДЕНИЕ}{6}{table.caption.1}%
+\contentsline {section}{\numberline {1}Дизассемблирование INT 8h}{7}{section.1}%
+\contentsline {section}{ЗАКЛЮЧЕНИЕ}{8}{section.1}%
