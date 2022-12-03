@@ -124,6 +124,8 @@ int main(void)
     
     if (shmctl(shmfd, IPC_RMID, 0) == -1)
         perror("shmctl: IPC_RMID");
+
+    return 0;
 }
 
 void consume(int shmfd, int semfd)
