@@ -119,7 +119,7 @@ int main(void)
 
 int start_read(int semfd)
 {
-    return semop(semfd, read_start, 5);
+    return semop(semfd, read_start, 4);
 }
 
 int stop_read(int semfd)
@@ -189,7 +189,7 @@ void write_work(int semfd, int shmfd)
 
         // start critical section
         (*counter)++;
-        printf("writer (pid %d): %d\n", getpid(), *counter);
+        printf("writer (pid %d): \t\t%d\n", getpid(), *counter);
         // end critical section
 
         if (stop_write(semfd) == -1)
