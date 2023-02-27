@@ -25,7 +25,7 @@ int main(void)
     struct sockaddr client_addr;
     socklen_t len;
 
-    fd = socket(AF_UNIX, SOCK_DGRAM, 0);
+    fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd == -1)
         perror("socket");
     else if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1)
@@ -34,10 +34,15 @@ int main(void)
     {
         printf("bind successful. Ready to listen...\n");
 
-        listen(fd, 1);
+        if (listen(fd, 1) != 0) {
+            perror("listen");
+        }
+
         while (1)
         {
-            if (recvfrom(fd, buf, 256, 0, &client_addr, &len) == -1)
+            int sock = accept(fd, &client_addr, &len);
+
+            if (recv(sock, buf, 256, 0) == -1)
             {
                 perror("recvfrom");
                 exit(1);
@@ -48,8 +53,11 @@ int main(void)
 
             snprintf(buf, sizeof(buf), "response for pid=%d", pid);
 
-            if (sendto(fd, buf, sizeof(buf), 0, &client_addr, len) == -1)
+            if (send(sock, buf, sizeof(buf), 0) == -1)
+            {
                 printf("error when sending response for pid=%d\n", pid);
+                perror("sendto");
+            }
             else
                 printf("sent response for pid=%d\n", pid);
         }

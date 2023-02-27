@@ -22,7 +22,7 @@ int main(void)
         .sun_path = CLIENT_SOCKET_PATH
     };
 
-    fd = socket(AF_UNIX, SOCK_DGRAM, 0);
+    fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd == -1)
     {
         perror("socket");
@@ -32,12 +32,16 @@ int main(void)
     {
         perror("bind");
     }
+    else if (connect(fd, (struct sockaddr*)&client_addr, sizeof(client_addr)) == -1)
+    {
+        perror("connect");
+    }
     else
     {
         printf("sending request...\n");
         snprintf(buf, sizeof(buf), "request from pid=%d", getpid());
 
-        if (sendto(fd, buf, sizeof(buf), 0, (struct sockaddr*)&client_addr, sizeof(addr)) == -1)
+        if (send(fd, buf, sizeof(buf), 0) == -1)
         {
             perror("sendto");
             exit(1);
@@ -45,7 +49,7 @@ int main(void)
 
         printf("sent request from pid=%d\n", getpid());
 
-        if (recvfrom(fd, buf, sizeof(buf), 0, NULL, NULL) == -1)
+        if (recv(fd, buf, sizeof(buf), 0) == -1)
             perror("recvfrom");
         else
             printf("received response: \"%s\"\n", buf);
