@@ -10,14 +10,14 @@
 int main(void)
 {
     int fd;
-    struct sockaddr_un addr = {
+    struct sockaddr_un client_addr = {
         .sun_family = AF_UNIX,
         .sun_path = SERVER_SOCKET_PATH
     };
 
     char buf[256];
 
-    struct sockaddr_un client_addr = {
+    struct sockaddr_un addr = {
         .sun_family = AF_UNIX,
         .sun_path = CLIENT_SOCKET_PATH
     };
