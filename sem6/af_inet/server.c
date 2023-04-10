@@ -46,7 +46,7 @@ int main(void)
         exit(1);
     }
 
-    if ((epollfd = epoll_create1(0)) == -1)
+    if ((epollfd = epoll_create1(EPOLL_CLOEXEC)) == -1)
     {
         perror("epoll_create1");
         exit(1);
