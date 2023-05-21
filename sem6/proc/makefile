@@ -1,2 +1,2 @@
 all:
-	gcc main.c -o main `pkg-config --cflags --libs gtk+-3.0`
+	gcc sort.c -o sort `pkg-config --cflags --libs gtk+-3.0`

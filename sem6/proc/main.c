@@ -1,209 +1,274 @@
+#include <dirent.h>
+#include <linux/limits.h>
 #include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 #include <stdlib.h>
-#include <pthread.h>
-#include <gtk/gtk.h>
+#include <stdint.h>
 
-#define MAX_THREADS 10
+#include "const.h"
 
-int num_threads = 1;
-int *array;
-int array_len = 0;
-int threads_initialized = 0;
+#define BUF_SIZE 10000
 
-pthread_t threads[MAX_THREADS];
-int thread_ids[MAX_THREADS];
+#define NO_ACCESS 1
+#define BAD_ARGS 2
 
-int thread_wait = 1;
 
-void *selection_sort(void *arg) {
-    int thread_id = *(int *)arg;
+void print_cmdline(const int pid) {
+    char path[PATH_MAX];
+    snprintf(path, PATH_MAX, "/proc/%d/cmdline", pid);
+    FILE *file = fopen(path, "r");
 
-    while (thread_wait) { }
+    char buf[BUF_SIZE];
+    int len = fread(buf, 1, BUF_SIZE, file);
+    buf[len - 1] = 0;
+    printf("\nCMDLINE:\n%s\n", buf);
 
-    int start = thread_id * (array_len / num_threads);
-    int end = start + (array_len / num_threads);
+    fclose(file);
+}
 
-    if (thread_id == num_threads - 1) {
-        end = array_len;
+void print_environ(const int pid) {
+    char pathToOpen[PATH_MAX];
+    snprintf(pathToOpen, PATH_MAX, "/proc/%d/environ", pid);
+    FILE *file = fopen(pathToOpen, "r");
+
+    int len;
+    char buf[BUF_SIZE];
+    printf("\nENVIRON:\n");
+    while ((len = fread(buf, 1, BUF_SIZE, file)) > 0) {
+        for (int i = 0; i < len; i++)
+            if (!buf[i])
+                buf[i] = '\n';
+        buf[len - 1] = '\n';
+        printf("%s", buf);
     }
 
-    for (int i = start; i < end - 1; i++) {
-        int min_idx = i;
-        for (int j = i + 1; j < end; j++) {
-            if (array[j] < array[min_idx]) {
-                min_idx = j;
-            }
+    fclose(file);
+}
+
+void print_fd(const int pid) {
+    char pathToOpen[PATH_MAX];
+    snprintf(pathToOpen, PATH_MAX, "/proc/%d/fd/", pid);
+    DIR *dir = opendir(pathToOpen);
+
+    printf("\nFD:\n");
+
+    struct dirent *readDir;
+    char string[PATH_MAX];
+    char path[BUF_SIZE] = {'\0'};
+    while ((readDir = readdir(dir)) != NULL) {
+        if ((strcmp(readDir->d_name, ".") != 0) && (strcmp(readDir->d_name, "..") != 0)) {
+            sprintf(path, "%s%s", pathToOpen, readDir->d_name);
+            int _read_len = readlink(path, string, PATH_MAX);
+            printf("%s -> %s\n", readDir->d_name, string);
         }
-        int temp = array[i];
-        array[i] = array[min_idx];
-        array[min_idx] = temp;
     }
 
-
-    return NULL;
+    closedir(dir);
 }
 
-void create_threads() {
-    thread_wait = 1;
-    for (int i = 0; i < num_threads; i++) {
-        thread_ids[i] = i;
-        pthread_create(&threads[i], NULL, selection_sort, &thread_ids[i]);
+void print_stat(const int pid) {
+    char pathToOpen[PATH_MAX];
+    snprintf(pathToOpen, PATH_MAX, "/proc/%d/stat", pid);
+    char buf[BUF_SIZE];
+
+    FILE *file = fopen(pathToOpen, "r");
+    fread(buf, 1, BUF_SIZE, file);
+    char *token = strtok(buf, " ");
+
+    printf("\nSTAT: \n");
+
+    for (int i = 0; token != NULL; i++) {
+        printf(NO_DESCR[i], token);
+        token = strtok(NULL, " ");
     }
+
+    fclose(file);
 }
 
-void show_info(int start, int mid, int end) {
-    printf("start mid end: %d, %d, %d\n", start, mid, end);
-    printf("array: ");
-    for (int i = 0; i < array_len; i++) {
-        printf("%d ", array[i]);
+void print_statm(const int pid) {
+    char pathToOpen[PATH_MAX];
+    snprintf(pathToOpen, PATH_MAX, "/proc/%d/statm", pid);
+    FILE *file = fopen(pathToOpen, "r");
+    char buf[BUF_SIZE];
+    fread(buf, 1, BUF_SIZE, file);
+
+    char *token = strtok(buf, " ");
+    printf("\nSTATM: \n");
+    for (int i = 0; token != NULL; i++) {
+        printf(STATM_PATTERNS[i], token);
+        token = strtok(NULL, " ");
     }
-    printf("\n");
+    fclose(file);
 }
 
-// Merges two subarrays of arr[].
-// First subarray is arr[l..m]
-// Second subarray is arr[m+1..r]
-void merge(int* arr, int l, int m, int r)
-{
-    int i, j, k;
-    int n1 = m - l + 1;
-    int n2 = r - m;
- 
-    /* create temp arrays */
-    int L[n1], R[n2];
- 
-    /* Copy data to temp arrays L[] and R[] */
-    for (i = 0; i < n1; i++)
-        L[i] = arr[l + i];
-    for (j = 0; j < n2; j++)
-        R[j] = arr[m + 1 + j];
- 
-    /* Merge the temp arrays back into arr[l..r]*/
-    i = 0; // Initial index of first subarray
-    j = 0; // Initial index of second subarray
-    k = l; // Initial index of merged subarray
-    while (i < n1 && j < n2) {
-        if (L[i] <= R[j]) {
-            arr[k] = L[i];
-            i++;
+void print_cwd(const int pid) {
+    char pathToOpen[PATH_MAX];
+    snprintf(pathToOpen, PATH_MAX, "/proc/%d/cwd", pid);
+    char buf[BUF_SIZE] = {'\0'};
+    int _read_len = readlink(pathToOpen, buf, BUF_SIZE);
+    printf("\nCWD:\n");
+    printf("%s\n", buf);
+}
+
+void print_io(const int pid) {
+    char pathToOpen[PATH_MAX];
+    snprintf(pathToOpen, PATH_MAX, "/proc/%d/io", pid);
+    char buf[BUF_SIZE] = {'\0'};
+    FILE *file = fopen(pathToOpen, "r");
+    printf("\nIO:\n");
+    int lengthOfRead;
+    while ((lengthOfRead = fread(buf, 1, BUF_SIZE, file))) {
+        buf[lengthOfRead] = '\0';
+        printf("%s\n", buf);
+    }
+    fclose(file);
+}
+
+void print_comm(const int pid) {
+    char pathToOpen[PATH_MAX];
+    snprintf(pathToOpen, PATH_MAX, "/proc/%d/comm", pid);
+    char buf[BUF_SIZE] = {'\0'};
+    FILE *file = fopen(pathToOpen, "r");
+    printf("\nCOMM:\n");
+    int lengthOfRead;
+    while ((lengthOfRead = fread(buf, 1, BUF_SIZE, file))) {
+        buf[lengthOfRead] = '\0';
+        printf("%s\n", buf);
+    }
+    fclose(file);
+}
+
+void print_exe(const int pid) {
+    char pathToOpen[PATH_MAX];
+    snprintf(pathToOpen, PATH_MAX, "/proc/%d/exe", pid);
+    char buf[BUF_SIZE] = {'\0'};
+    int _read_len = readlink(pathToOpen, buf, BUF_SIZE);
+    printf("\nEXE:\n");
+    printf("%s\n", buf);
+}
+
+void print_maps(const int pid) {
+    char *line;
+    int start_addr, end_addr, page_size = 4096;
+    size_t line_size;
+    ssize_t line_length;
+
+    char pathToOpen[PATH_MAX];
+    snprintf(pathToOpen, PATH_MAX, "/proc/%d/maps", pid);
+    char buf[BUF_SIZE] = {'\0'};
+    FILE *file = fopen(pathToOpen, "r");
+    printf("\nMAPS:\n");
+    int lengthOfRead;
+    do
+    {
+        line_length = getline(&line, &line_size, file);
+        if (!feof(file) && line_length == -1)
+        {
+            perror("getline():");
+            fclose(file);
+            free(line);
+            exit(1);
         }
-        else {
-            arr[k] = R[j];
-            j++;
+        sscanf(line, "%x-%x", &start_addr, &end_addr);
+        printf("%d\t%s", (end_addr - start_addr) / page_size, line);
+    } while (!feof(file));
+    fclose(file);
+}
+
+void print_file(const int num) {
+    char pathToOpen[PATH_MAX];
+    snprintf(pathToOpen, PATH_MAX, "/proc/%d/maps", num);
+    char buf[BUF_SIZE] = {'\0'};
+    FILE *file = fopen(pathToOpen, "r");
+    int lengthOfRead;
+    while ((lengthOfRead = fread(buf, 1, BUF_SIZE, file))) {
+        buf[lengthOfRead] = '\0';
+        printf("%s\n", buf);
+    }
+    fclose(file);
+}
+
+void print_task(const int pid) {
+    DIR *d;
+    struct dirent *dir;
+
+    char pathToOpen[PATH_MAX];
+    snprintf(pathToOpen, PATH_MAX, "/proc/%d/task", pid);
+
+    printf("\nTASK:\n");
+
+    d = opendir(pathToOpen);
+    if (d) {
+        while ((dir = readdir(d)) != NULL) {
+            printf("%s\n", dir->d_name);
         }
-        k++;
-    }
- 
-    /* Copy the remaining elements of L[], if there
-    are any */
-    while (i < n1) {
-        arr[k] = L[i];
-        i++;
-        k++;
-    }
- 
-    /* Copy the remaining elements of R[], if there
-    are any */
-    while (j < n2) {
-        arr[k] = R[j];
-        j++;
-        k++;
+        closedir(d);
     }
 }
 
-void sort_array() {
-    thread_wait = 0;
+void print_pagemap(const int pid) {
+    DIR *d;
+    struct dirent *dir;
 
-    for (int i = 0; i < num_threads; i++) {
-        pthread_join(threads[i], NULL);
-    }
+    char pathToOpen[PATH_MAX];
+    snprintf(pathToOpen, PATH_MAX, "/proc/%d/pagemap", pid);
 
-    for (int i = 1; i < num_threads; i++) {
-        int block_size = array_len / num_threads;
-        int mid = i * block_size;
-        int end = (i + 1) * block_size;
+    printf("\nPAGEMAP:\n");
 
-        if (i == num_threads - 1) {
-            end = array_len;
+    d = opendir(pathToOpen);
+    if (d) {
+        while ((dir = readdir(d)) != NULL) {
+            printf("%s\n", dir->d_name);
         }
-
-        merge(array, 0, mid - 1, end - 1);
+        closedir(d);
     }
 }
 
-void on_sort_button_clicked(GtkButton *button, gpointer user_data) {
-    create_threads();
-    threads_initialized = 1;
+void print_root(const int pid) {
+    char pathToOpen[PATH_MAX];
+    snprintf(pathToOpen, PATH_MAX, "/proc/%d/root", pid);
+    char buf[BUF_SIZE] = {'\0'};
+    int _read_len = readlink(pathToOpen, buf, BUF_SIZE);
+    
+    printf("\nROOT:\n");
+    printf("%s\n", buf);
 }
 
-void on_threads_changed(GtkSpinButton *spin_button, gpointer user_data) {
-    num_threads = gtk_spin_button_get_value_as_int(spin_button);
-}
-
-void on_array_entry_changed(GtkEditable *editable, gpointer user_data) {
-    const gchar *text = gtk_entry_get_text(GTK_ENTRY(editable));
-    gchar **tokens = g_strsplit(text, ",", -1);
-    array_len = g_strv_length(tokens);
-    array = realloc(array, array_len * sizeof(int));
-    for (int i = 0; i < array_len; i++) {
-        array[i] = atoi(tokens[i]);
-    }
-    g_strfreev(tokens);
-}
-
-void on_finish_button_clicked(GtkButton *button, gpointer user_data) {
-    if (!threads_initialized) {
-        return;
+int get_pid(int argc, char *argv[]) {
+    if (argc < 2) {
+        printf("Введите pid процесса для исследования\n");
+        exit(BAD_ARGS);
     }
 
-    sort_array();
-    threads_initialized = 0;
-
-    GtkWidget *array_label = GTK_WIDGET(user_data);
-    char *array_str = g_strdup_printf("[%d", array[0]);
-    for (int i = 1; i < array_len; i++) {
-        array_str = g_strdup_printf("%s, %d", array_str, array[i]);
+    int pid = atoi(argv[1]);
+    char check_dir[PATH_MAX];
+    snprintf(check_dir, PATH_MAX, "/proc/%d", pid);
+    if (!pid || access(check_dir, F_OK)) {
+        printf("Директории для введенного pid не найдено\n");
+        exit(NO_ACCESS);
     }
-    array_str = g_strdup_printf("%s]", array_str);
-    gtk_label_set_text(GTK_LABEL(array_label), array_str);
+
+    return pid;
 }
+
 
 int main(int argc, char *argv[]) {
-    gtk_init(&argc, &argv);
+    int pid = get_pid(argc, argv);
 
-    GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title(GTK_WINDOW(window), "Multithreaded Selection Sort");
-    g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
-
-    GtkWidget *array_entry = gtk_entry_new();
-    GtkWidget *threads_spin = gtk_spin_button_new_with_range(1, MAX_THREADS, 1);
-    GtkWidget *sort_button = gtk_button_new_with_label("Sort");
-    GtkWidget *array_label = gtk_label_new(NULL);
-    GtkWidget *finish_button = gtk_button_new_with_label("Finish");
-
-    g_signal_connect(array_entry, "changed", G_CALLBACK(on_array_entry_changed), NULL);
-    g_signal_connect(threads_spin, "value-changed", G_CALLBACK(on_threads_changed), NULL);
-    g_signal_connect(sort_button, "clicked", G_CALLBACK(on_sort_button_clicked), NULL);
-    g_signal_connect(finish_button, "clicked", G_CALLBACK(on_finish_button_clicked), array_label);
-
-    GtkWidget *grid = gtk_grid_new();
-    gtk_grid_set_column_homogeneous(GTK_GRID(grid), TRUE);
-    gtk_grid_set_row_spacing(GTK_GRID(grid), 10);
-    gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Array:"), 0, 0, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), array_entry, 1, 0, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Threads:"), 0, 1, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), threads_spin, 1, 1, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), sort_button, 0, 2, 2, 1);
-    gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Sorted Array:"), 0, 3, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), finish_button, 1, 3, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), array_label, 0, 4, 2, 1);
-
-    gtk_container_add(GTK_CONTAINER(window), grid);
-    gtk_widget_show_all(window);
-
-    gtk_main();
-
-    free(array);
+    print_cmdline(pid);
+    print_fd(pid);
+    print_environ(pid);
+    print_stat(pid);
+    print_statm(pid);
+    print_cwd(pid);
+    print_exe(pid);
+    print_maps(pid);
+    print_io(pid);
+    print_comm(pid);
+    print_root(pid);
+    print_task(pid);
+    print_pagemap(pid);
 
     return 0;
 }
