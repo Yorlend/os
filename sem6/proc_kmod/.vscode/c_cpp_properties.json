@@ -4,9 +4,9 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/usr/src/linux-zen/include/",
-                "/usr/src/linux-zen/arch/x86/include/",
-                "/usr/src/linux-zen/arch/x86/include/generated/"
+                "/usr/src/linux-lts/include/",
+                "/usr/src/linux-lts/arch/x86/include/",
+                "/usr/src/linux-lts/arch/x86/include/generated/"
             ],
             "defines": [
                 "__KERNEL__",

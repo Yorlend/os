@@ -4,7 +4,7 @@ PWD := $(shell pwd)
 .PHONY: clean
 
 obj-m += md.o
-md-objs = ./src/md.o ./src/cookie.o
+md-objs = ./src/md.o
 
 all: build_modules
 	@rm -rf .*.ko.cmd .*.mod.o.cmd .*.o.cmd .*.o.d *.mod.c *.mod.o *.o .*.*.cmd *.mod *.symvers *.order
