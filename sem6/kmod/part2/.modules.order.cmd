@@ -1,0 +1,1 @@
+savedcmd_/home/yorlend/prog/os/sem6/kmod/part2/modules.order := {   echo /home/yorlend/prog/os/sem6/kmod/part2/md1.o;   echo /home/yorlend/prog/os/sem6/kmod/part2/md2.o;   echo /home/yorlend/prog/os/sem6/kmod/part2/md3.o; :; } > /home/yorlend/prog/os/sem6/kmod/part2/modules.order

@@ -1,0 +1,1 @@
+savedcmd_/home/yorlend/prog/os/sem6/kmod/part2/md3.ko := ld -r -m elf_x86_64 -z noexecstack --no-warn-rwx-segments --build-id=sha1  -T scripts/module.lds -o /home/yorlend/prog/os/sem6/kmod/part2/md3.ko /home/yorlend/prog/os/sem6/kmod/part2/md3.o /home/yorlend/prog/os/sem6/kmod/part2/md3.mod.o;  true

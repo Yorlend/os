@@ -1,0 +1,1 @@
+savedcmd_/home/yorlend/prog/os/sem6/kmod/part2/Module.symvers :=  scripts/mod/modpost  -a    -N -o /home/yorlend/prog/os/sem6/kmod/part2/Module.symvers -T /home/yorlend/prog/os/sem6/kmod/part2/modules.order -i Module.symvers -e 

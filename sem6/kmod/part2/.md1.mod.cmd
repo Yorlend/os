@@ -1,0 +1,1 @@
+savedcmd_/home/yorlend/prog/os/sem6/kmod/part2/md1.mod := printf '%s\n'   md1.o | awk '!x[$$0]++ { print("/home/yorlend/prog/os/sem6/kmod/part2/"$$0) }' > /home/yorlend/prog/os/sem6/kmod/part2/md1.mod

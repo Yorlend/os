@@ -15,7 +15,6 @@ static struct proc_dir_entry *symlink_dentry;
 static struct proc_dir_entry *fortune_dentry;
 
 #define COOKIE_POT_SIZE PAGE_SIZE
-// static struct cookie *cookie_pot = NULL;
 
 static char *cookie_pot = NULL;
 char buffer[COOKIE_POT_SIZE];
